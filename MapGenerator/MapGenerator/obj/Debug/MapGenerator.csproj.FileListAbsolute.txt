@@ -1,0 +1,6 @@
+D:\Dev\csharp\mapgen\MapGenerator\MapGenerator\bin\Debug\Map Generator.pdb
+D:\Dev\csharp\mapgen\MapGenerator\MapGenerator\bin\Debug\Voronoi.dll
+D:\Dev\csharp\mapgen\MapGenerator\MapGenerator\obj\Debug\MapGenerator.csprojResolveAssemblyReference.cache
+D:\Dev\csharp\mapgen\MapGenerator\MapGenerator\obj\Debug\Map Generator.pdb
+D:\Dev\csharp\mapgen\MapGenerator\MapGenerator\bin\Debug\Map Generator.dll
+D:\Dev\csharp\mapgen\MapGenerator\MapGenerator\obj\Debug\Map Generator.dll

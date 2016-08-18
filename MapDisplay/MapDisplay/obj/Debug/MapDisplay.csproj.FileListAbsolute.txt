@@ -1,0 +1,11 @@
+D:\Dev\csharp\mapgen\MapDisplay\MapDisplay\bin\Debug\MapDisplay.exe.config
+D:\Dev\csharp\mapgen\MapDisplay\MapDisplay\bin\Debug\MapDisplay.exe
+D:\Dev\csharp\mapgen\MapDisplay\MapDisplay\bin\Debug\MapDisplay.pdb
+D:\Dev\csharp\mapgen\MapDisplay\MapDisplay\bin\Debug\Map Generator.dll
+D:\Dev\csharp\mapgen\MapDisplay\MapDisplay\bin\Debug\Voronoi.dll
+D:\Dev\csharp\mapgen\MapDisplay\MapDisplay\obj\Debug\MapDisplay.csprojResolveAssemblyReference.cache
+D:\Dev\csharp\mapgen\MapDisplay\MapDisplay\obj\Debug\MapDisplay.MapDisplay.resources
+D:\Dev\csharp\mapgen\MapDisplay\MapDisplay\obj\Debug\MapDisplay.Properties.Resources.resources
+D:\Dev\csharp\mapgen\MapDisplay\MapDisplay\obj\Debug\MapDisplay.csproj.GenerateResource.Cache
+D:\Dev\csharp\mapgen\MapDisplay\MapDisplay\obj\Debug\MapDisplay.exe
+D:\Dev\csharp\mapgen\MapDisplay\MapDisplay\obj\Debug\MapDisplay.pdb
