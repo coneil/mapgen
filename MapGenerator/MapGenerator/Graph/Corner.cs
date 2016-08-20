@@ -15,6 +15,7 @@ namespace coneil.World.Map.Graph
 
         // General flags and values to describe the topographical nature of the corner
         public bool IsWater;
+        public bool IsOcean;
         public bool IsCoast;
         public bool IsBorder;
         public float Elevation; // arbitrary value, relative to all other points. typically normalized

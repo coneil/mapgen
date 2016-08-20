@@ -29,6 +29,7 @@ namespace coneil.World.Map.Graph
 
             Edges = new Edge[3] { E0, E1, E2 };
 
+            List<Corner> corners = new List<Corner>();
             foreach(var e in Edges)
             {
                 foreach(var c in e.Corners)
@@ -39,13 +40,46 @@ namespace coneil.World.Map.Graph
                         EdgeCorner0 = c;
                     else if(EdgeCorner1 == null && EdgeCorner0 != c)
                         EdgeCorner1 = c;
+
+                    if(!corners.Contains(c)) corners.Add(c);
                 }
             }
+
+            Corners = corners.ToArray();
             
             if(VoronoiSite == null)
                 throw new Exception("Voronoi site not found for tri! All tris should be created from a voronoi site and one of its edges.");
+        }
 
-            Corners = new Corner[3] { VoronoiSite, EdgeCorner0, EdgeCorner1 };
+        public float GetElevation()
+        {
+            return Corners.Average(x => x.Elevation);
+        }
+
+        public bool IsWater(float lakeThreshold)
+        {
+            if(IsOcean()) return true;
+
+            List<Corner> corners = new List<Corner>();
+            foreach(var c in Corners)
+            {
+                corners.Add(c);
+
+                foreach(var n in c.NeighboringCorners)
+                {
+                    if(corners.Contains(n)) continue; 
+
+                    corners.Add(n);
+                }
+            }
+
+            return (corners.Count(x => x.IsWater) / (float) corners.Count) > lakeThreshold;
+        }
+
+        public bool IsOcean()
+        {
+            int numWater = Corners.Count(x => x.IsOcean);
+            return numWater > 2 || Corners.Count(x => x.IsCoast) > 0;
         }
     }
 }

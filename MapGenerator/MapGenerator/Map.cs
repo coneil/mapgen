@@ -34,6 +34,18 @@ namespace coneil.World.Map
             Voronoi voronoi = new Voronoi(points, new List<uint>(), Bounds);
 
             BuildGraph(points, voronoi);
+
+            // Generate proto landscape
+            DefineRandomSlope();
+
+            for(int i = 0; i < Config.NumberOfBlobs; i++) { AddBlob(); }
+
+            PlanchonDarbouxCorrection();
+            Normalize();
+            SetSeaLevel();
+
+            // Identify basic types
+            //AssignOceanAndLand();
             
             // Generate random points √
             // Relax those points √
@@ -52,6 +64,7 @@ namespace coneil.World.Map
                 // Biomes are ultimately assigned for each center using data about surrounding corners
         }
 
+        #region GRAPH GENERATION
         List<Point> GeneratePoints(int numPoints, Rectangle bounds, int numRelaxSteps)
         {
             List<Point> points = new List<Point>();
@@ -207,5 +220,215 @@ namespace coneil.World.Map
 
             return result;
         }
+        #endregion
+
+        #region GRAPH OPERATIONS
+        public void DefineRandomSlope()
+        {
+            // Create random line segment to act as our highest point/slope
+            // Elevation is set as distance to segment
+            Point v = new Point();
+            v.X = _rnd.NextDouble() * Bounds.Width;
+            v.Y = _rnd.NextDouble() * Bounds.Height;
+            Point w = new Point();
+            w.X = _rnd.NextDouble() * Bounds.Width;
+            w.Y = _rnd.NextDouble() * Bounds.Height;
+
+            Func<Point, Point, double> dist2 = (a, b) => { return (a.X - b.X) * (a.X - b.X) + (a.Y - b.Y) * (a.Y - b.Y); };
+
+            double l2 = dist2(v, w);
+            double maxDist = Bounds.Width > Bounds.Height ? Bounds.Width * Bounds.Width : Bounds.Height * Bounds.Height;
+
+            foreach(var c in Corners)
+            {
+                var p = c.Point;
+                double dist = 0;
+                if(l2 == 0)
+                {
+                    dist = dist2(p, v);
+                }
+                else
+                {
+                    double t = ((p.X - v.X) * (w.X - v.X) + (p.Y - v.Y) * (w.Y - v.Y)) / l2;
+                    t = t < 0 ? 0 : t;
+                    t = t > 1 ? 1 : t;
+                    Point d = new Point(v.X + t * (w.X - v.X), v.Y + t * (w.Y - v.Y));
+                    dist = dist2(p, d);
+                }
+
+                c.Elevation = Convert.ToSingle(1D - (dist / maxDist));
+                c.Elevation = c.Elevation < 0 ? 0 : c.Elevation;
+                c.Elevation = c.Elevation > 1 ? 1 : c.Elevation;
+            }
+        }
+
+        // Scale elevation of all corners so that they lie w/in a range of 0-1
+        public void Normalize()
+        {
+            var ordered = Corners.OrderBy(x => x.Elevation);
+            var lowest = ordered.ElementAt(0).Elevation;
+            var highest = ordered.ElementAt(ordered.Count() - 1).Elevation;
+            var range = highest - lowest;
+            foreach(var c in Corners)
+            {
+                c.Elevation = (c.Elevation - lowest) / range;
+            }
+        }
+
+        // Assign sqrt of elevation to elevation, blunting higher elevations
+        public void Round()
+        {
+            foreach(var c in Corners)
+            {
+                c.Elevation = Convert.ToSingle(System.Math.Sqrt(c.Elevation));
+            }
+        }
+
+        public void ChaoticRelax()
+        {
+            List<Corner> queue = new List<Corner>() { Corners[0] };
+            List<Corner> touched = new List<Corner>();
+
+            while(queue.Count > 0)
+            {
+                var c = queue[0];
+                queue.Remove(c);
+                touched.Add(c);
+                c.Elevation = c.NeighboringCorners.Average(x => x.Elevation);
+                foreach(var n in c.NeighboringCorners)
+                {
+                    if(!queue.Contains(n) && !touched.Contains(n)) queue.Add(n);
+                }
+            }
+        }
+
+        public void Relax()
+        {
+            List<float> elevations = new List<float>();
+            for(int i = 0; i < Corners.Count; i++)
+            {
+                float avg = 0f;
+                foreach(var n in Corners[i].NeighboringCorners)
+                {
+                    avg += n.Elevation;
+                }
+                avg /= (float)Corners[i].NeighboringCorners.Count;
+                elevations.Add(avg);
+            }
+            for(int i = 0; i < Corners.Count; i++)
+            {
+                Corners[i].Elevation = elevations[i];
+                System.Diagnostics.Debug.WriteLine(Corners[i].Elevation);
+            }
+        }
+
+        // Adjust elevations of all corners to move graph up/down wherein elevation 0 is at median
+        public void SetSeaLevel()
+        {
+            float median = Convert.ToSingle(Corners.Median(x => x.Elevation));
+            foreach(var c in Corners)
+            {
+                c.Elevation -= median;
+            }
+        }
+
+        public void AddBlob()
+        {
+            int index = _rnd.Next(Corners.Count);
+            List<Corner> touched = new List<Corner>();
+            List<Corner> queue = new List<Corner>() { Corners[index] };
+            float steps = Convert.ToSingle((_rnd.NextDouble() * 6) + 6);
+            float step = 1f;
+            while(step < steps)
+            {
+                var q = queue.ToList();
+                queue.Clear();
+
+                foreach(var c in q)
+                {
+                    touched.Add(c);
+
+                    var e = (1f - Convert.ToSingle(System.Math.Sqrt(step /(float) steps))) - Convert.ToSingle((_rnd.NextDouble() * 0.1f));
+                    c.Elevation = e < c.Elevation ? c.Elevation : e;
+
+                    foreach(var neighbor in c.NeighboringCorners)
+                    {
+                        if(!touched.Contains(neighbor) && !queue.Contains(neighbor))
+                            queue.Add(neighbor);
+                    }
+                }
+
+                step++;
+            }
+        }
+        #endregion
+
+        #region TOPOGRAPHY OPERATIONS
+        public void PlanchonDarbouxCorrection()
+        {
+            List<Corner> queue = new List<Corner>();
+            // Hijacking Moisture to store current elevation
+            foreach(var c in Corners)
+            {
+                c.Moisture = c.Elevation;
+                if(!c.IsBorder)
+                    c.Elevation = float.PositiveInfinity;
+            }
+
+            while(true)
+            {
+                bool touched = false;
+                foreach(var c in Corners)
+                {
+                    float lowest = float.PositiveInfinity;
+                    foreach(var n in c.NeighboringCorners)
+                    {
+                        if(n.Elevation < c.Elevation)
+                        {
+                            lowest = n.Elevation;
+                        }
+                    }
+                    if(lowest < float.PositiveInfinity)
+                    {
+                        float desiredElevation = lowest + 0.001f;
+                        desiredElevation = desiredElevation < c.Moisture ? c.Moisture : desiredElevation;
+                        if(c.Elevation == float.PositiveInfinity)
+                        {
+                            c.Elevation = desiredElevation;
+                            touched = true;
+                        }
+                        else if(desiredElevation > c.Elevation)
+                        {
+                            c.Elevation = desiredElevation;
+                            touched = true;
+                        }
+                    }
+                }
+
+                if(!touched) break;
+            }
+
+            // Reset moisture
+            foreach(var c in Corners) c.Moisture = 0f;
+        }
+
+        public void AssignOceanAndLand()
+        {
+            List<Corner> oceanQueue = new List<Corner>();
+            foreach(var c in Corners)
+            {
+                if(c.Elevation <= 0f)
+                {
+                    c.IsWater = true;
+
+                    if(c.IsBorder)
+                    {
+                        c.IsOcean = true;
+                        oceanQueue.Add(c);
+                    }
+                }
+            }
+        }
+        #endregion
     }
 }

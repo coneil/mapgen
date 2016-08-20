@@ -49,6 +49,7 @@
     <Compile Include="Graph\Edge.cs" />
     <Compile Include="Graph\Tri.cs" />
     <Compile Include="MapConfig.cs" />
+    <Compile Include="MedianExtension.cs" />
     <Compile Include="TestGenerator.cs" />
     <Compile Include="Map.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

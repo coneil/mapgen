@@ -14,14 +14,20 @@ namespace coneil.World.Map
         public int LloydRelaxationIterations;
         public int Seed;
         public float LakeThreshold;
+        public float MinimumElevation;
+        public float MaximumElevation;
+        public int NumberOfBlobs;
 
         public MapConfig()
         {
             Width = Height = 512;
-            NumberOfVoronoiSites = 1 << 14;
-            LloydRelaxationIterations = 2;
+            NumberOfVoronoiSites = 1 << 12;
+            LloydRelaxationIterations = 3;
             Seed = new Random().Next(int.MaxValue);
             LakeThreshold = 0.3f;
+            MinimumElevation = 0f;
+            MaximumElevation = 1f;
+            NumberOfBlobs = 5;
         }
     }
 }
