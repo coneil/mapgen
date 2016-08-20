@@ -45,7 +45,7 @@ namespace coneil.World.Map
             SetSeaLevel();
 
             // Identify basic types
-            //AssignOceanAndLand();
+            AssignOceanAndLand();
             
             // Generate random points √
             // Relax those points √
@@ -106,7 +106,6 @@ namespace coneil.World.Map
 
         void BuildGraph(List<Point> points, Voronoi voronoi)
         {
-            var corners = new List<Corner>();
             var libedges = voronoi.Edges;
 
             // Create corners for voronoi sites
@@ -116,7 +115,7 @@ namespace coneil.World.Map
                 Corner c = new Corner();
                 c.Point = p;
                 c.IsCenter = true;
-                corners.Add(c);
+                Corners.Add(c);
                 centers.Add(c);
             }
 
@@ -414,6 +413,7 @@ namespace coneil.World.Map
 
         public void AssignOceanAndLand()
         {
+            // Mark all water points, with border points being ocean
             List<Corner> oceanQueue = new List<Corner>();
             foreach(var c in Corners)
             {
@@ -427,6 +427,31 @@ namespace coneil.World.Map
                         oceanQueue.Add(c);
                     }
                 }
+            }
+
+            // Assign ocean to water points neighboring ocean points
+            while(oceanQueue.Count > 0)
+            {
+                Corner c = oceanQueue[0];
+                oceanQueue.RemoveAt(0);
+                foreach(var n in c.NeighboringCorners)
+                {
+                    if(!n.IsOcean && n.IsWater)
+                    {
+                        n.IsOcean = true;
+                        oceanQueue.Add(n);
+                    }
+                }
+            }
+
+            System.Diagnostics.Debug.WriteLine(Corners.Count(x => x.IsOcean) + " of " + Corners.Count + " are ocean");
+
+            // Identify all coastal points
+            foreach(var c in Corners)
+            {
+                if(c.IsWater) continue;
+
+                c.IsCoast = c.NeighboringCorners.Count(x => x.IsOcean) > 0;
             }
         }
         #endregion

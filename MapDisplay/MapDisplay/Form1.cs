@@ -33,6 +33,8 @@ namespace MapDisplay
             {
                 var g = this.CreateGraphics();
                 var p = new Pen(Color.Black, 1f);
+                var rp = new Pen(Color.Red, 1f);
+                var gp = new Pen(Color.Green, 1f);
 
                 foreach(var poly in _map.Polys)
                 {
@@ -45,14 +47,42 @@ namespace MapDisplay
 
                     float el = poly.GetElevation();
                     Color color;
-                    if(el >= 0)
-                        color = Color.Black;// LerpColor(Color.Blue, Color.Yellow, el);
+                    if(poly.IsOcean())
+                        color = Color.Blue;// LerpColor(Color.Blue, Color.Yellow, el);
+                    else if(poly.IsWater(_map.Config.LakeThreshold))
+                        color = Color.BlueViolet;// LerpColor(Color.Blue, Color.Red, -el);
                     else
-                        color = Color.Red;// LerpColor(Color.Blue, Color.Red, -el);
+                        color = Color.SaddleBrown;
 
                     Brush b = new SolidBrush(color);
                     g.FillPolygon(b, points.ToArray());
                 }
+                
+                foreach(var edge in _map.Edges)
+                {
+                    if(edge.C0.IsCoast && edge.C1.IsCoast)
+                    {
+                        g.DrawLine(p, new PointF(f(edge.C0.Point.X), f(edge.C0.Point.Y)), new PointF(f(edge.C1.Point.X), f(edge.C1.Point.Y)));
+                    }
+                }
+                 
+                /*
+                foreach(var corner in _map.Corners)
+                {
+                    if(corner.IsOcean)
+                    {
+                        g.DrawRectangle(p, new System.Drawing.Rectangle(Convert.ToInt32(corner.Point.X), Convert.ToInt32(corner.Point.Y), 2, 2));
+                    }
+                    else if(!corner.IsWater)
+                    {
+                        g.DrawRectangle(rp, new System.Drawing.Rectangle(Convert.ToInt32(corner.Point.X), Convert.ToInt32(corner.Point.Y), 2, 2));
+                    }
+                    else
+                    {
+                        g.DrawRectangle(gp, new System.Drawing.Rectangle(Convert.ToInt32(corner.Point.X), Convert.ToInt32(corner.Point.Y), 2, 2));
+                    }
+                }*/
+                 
                 /*
                 foreach(var edge in _map.Edges)
                 {
