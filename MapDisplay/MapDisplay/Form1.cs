@@ -10,6 +10,8 @@ using System.Windows.Forms;
 using coneil.Math.Voronoi;
 using coneil.Math.Voronoi.Geometry;
 using coneil.World;
+using coneil.World.Map;
+using coneil.World.Map.Graph;
 
 namespace MapDisplay
 {
@@ -32,21 +34,20 @@ namespace MapDisplay
                 var g = this.CreateGraphics();
                 var p = new Pen(Color.Black, 1f);
 
-                foreach(coneil.Math.Voronoi.Edge edge in _map.VoronoiGraph.Edges)
+                foreach(coneil.World.Map.Graph.Edge edge in _map.Edges)
                 {
-                    if(!edge.Visible) continue;
-                    var ve = edge.VoronoiEdge;
-                    g.DrawLine(p, new PointF(f(ve.P0.X), f(ve.P0.Y)), new PointF(f(ve.P1.X), f(ve.P1.Y)));
+                    g.DrawLine(p, new PointF(f(edge.C0.Point.X), f(edge.C0.Point.Y)), new PointF(f(edge.C1.Point.X), f(edge.C1.Point.Y)));
                 } 
             }
         }
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            const int SIZE = 512;
-            const int NUM_POINTS = 1 << 12;
-            coneil.Math.Voronoi.Geometry.Rectangle bounds = new coneil.Math.Voronoi.Geometry.Rectangle(0, 0, SIZE, SIZE);
-            _map = new coneil.World.Map.Map(NUM_POINTS, 2, bounds);
+            var config = new MapConfig();
+            config.NumberOfVoronoiSites = 1 << 12;
+            config.LloydRelaxationIterations = 3;
+
+            _map = new coneil.World.Map.Map(config);
             _draw = true;
         }
 

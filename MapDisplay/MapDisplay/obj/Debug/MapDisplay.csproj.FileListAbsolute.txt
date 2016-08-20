@@ -9,3 +9,4 @@ D:\Dev\csharp\mapgen\MapDisplay\MapDisplay\obj\Debug\MapDisplay.Properties.Resou
 D:\Dev\csharp\mapgen\MapDisplay\MapDisplay\obj\Debug\MapDisplay.csproj.GenerateResource.Cache
 D:\Dev\csharp\mapgen\MapDisplay\MapDisplay\obj\Debug\MapDisplay.exe
 D:\Dev\csharp\mapgen\MapDisplay\MapDisplay\obj\Debug\MapDisplay.pdb
+D:\Dev\csharp\mapgen\MapDisplay\MapDisplay\bin\Debug\Map Generator.pdb
