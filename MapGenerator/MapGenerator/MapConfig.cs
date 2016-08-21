@@ -17,6 +17,12 @@ namespace coneil.World.Map
         public float MinimumElevation;
         public float MaximumElevation;
         public int NumberOfBlobs;
+        
+        public int WatershedMaxSteps;
+        public int MinimumNumberOfRivers;
+        public int MaximumNumberOfRivers;
+        public float MinimumRiverSourceElevation;
+        public float MaximumRiverSourceElevation;
 
         public MapConfig()
         {
@@ -27,7 +33,12 @@ namespace coneil.World.Map
             LakeThreshold = 0.3f;
             MinimumElevation = 0f;
             MaximumElevation = 1f;
-            NumberOfBlobs = 5;
+            NumberOfBlobs = 20;
+            WatershedMaxSteps = 20;
+            MinimumNumberOfRivers = 10;
+            MaximumNumberOfRivers = 20;
+            MinimumRiverSourceElevation = 0.5f;
+            MaximumRiverSourceElevation = 0.9f;
         }
     }
 }

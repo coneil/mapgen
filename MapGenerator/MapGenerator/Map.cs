@@ -41,11 +41,12 @@ namespace coneil.World.Map
             for(int i = 0; i < Config.NumberOfBlobs; i++) { AddBlob(); }
 
             PlanchonDarbouxCorrection();
-            Normalize();
             SetSeaLevel();
-
-            // Identify basic types
-            AssignOceanAndLand();
+            AssignOceanAndLand(); // Assumes all ocean is below elevation 0 when it's run (done by SetSeaLevel())
+            AssignDownslopesAndWatersheds();
+            Normalize(); // Normalize so we can more easily find spots for river sources. Assume elevation values of 0-1 from here on.
+            RedistributeElevations();
+            CreateRivers();
             
             // Generate random points √
             // Relax those points √
@@ -276,6 +277,19 @@ namespace coneil.World.Map
             }
         }
 
+        // Curve out elevations so that higher peaks occur with less frequency
+        void RedistributeElevations()
+        {
+            var sorted = Corners.OrderBy(x => x.Elevation).ToArray();
+            for(int i = 0; i < sorted.Length; i++)
+            {
+                float y = i / (float) (sorted.Length - 1);
+                double x = System.Math.Sqrt(1.1f) - System.Math.Sqrt(1.1f * (1f - y));
+                if(x > 1) x = 1;
+                sorted[i].Elevation = Convert.ToSingle(x);
+            }
+        }
+
         // Assign sqrt of elevation to elevation, blunting higher elevations
         public void Round()
         {
@@ -338,7 +352,7 @@ namespace coneil.World.Map
             int index = _rnd.Next(Corners.Count);
             List<Corner> touched = new List<Corner>();
             List<Corner> queue = new List<Corner>() { Corners[index] };
-            float steps = Convert.ToSingle((_rnd.NextDouble() * 6) + 6);
+            float steps = Convert.ToSingle((_rnd.NextDouble() * 6) + 10);
             float step = 1f;
             while(step < steps)
             {
@@ -349,7 +363,7 @@ namespace coneil.World.Map
                 {
                     touched.Add(c);
 
-                    var e = (1f - Convert.ToSingle(System.Math.Sqrt(step /(float) steps))) - Convert.ToSingle((_rnd.NextDouble() * 0.1f));
+                    var e = (1f - step /(float) steps) + Convert.ToSingle((_rnd.NextDouble() * 0.1f));
                     c.Elevation = e < c.Elevation ? c.Elevation : e;
 
                     foreach(var neighbor in c.NeighboringCorners)
@@ -364,7 +378,7 @@ namespace coneil.World.Map
         }
         #endregion
 
-        #region TOPOGRAPHY OPERATIONS
+        #region LAND AND OCEAN
         public void PlanchonDarbouxCorrection()
         {
             List<Corner> queue = new List<Corner>();
@@ -490,6 +504,85 @@ namespace coneil.World.Map
                     else
                     {
                         System.Diagnostics.Debug.WriteLine("Null poly");
+                    }
+                }
+            }
+        }
+        #endregion
+
+        #region RIVERS AND EROSION
+        void AssignDownslopesAndWatersheds()
+        {
+            foreach(var c in Corners)
+            {
+                Corner d = c;
+                foreach(var n in c.NeighboringCorners)
+                {
+                    if(n.Elevation <= d.Elevation)
+                    {
+                        d = n;
+                    }
+                }
+                c.Downslope = d;
+                c.Watershed = c;
+                if(!c.IsOcean && !c.IsCoast) c.Watershed = c.Downslope;
+            }
+
+            var carriers = Corners.Where(x => !x.IsOcean && !x.IsCoast && !x.Watershed.IsCoast).ToArray();
+            int step = 0;
+            bool changed;
+            do
+            {
+                step++;
+                changed = false;
+                foreach(var c in carriers)
+                {
+                    if(!c.Watershed.IsCoast)
+                    {
+                        Corner w = c.Watershed.Watershed;
+                        if(!w.IsOcean && w != c.Watershed)
+                        {
+                            c.Watershed = w;
+                            changed = true;
+                        }
+                    }
+                }
+            }
+            while(step <= Config.WatershedMaxSteps && changed);
+        }
+
+        void CreateRivers()
+        {
+            int attempts = Config.MinimumNumberOfRivers + _rnd.Next(Config.MaximumNumberOfRivers - Config.MinimumNumberOfRivers);
+            var candidates = Corners.Where(x => x.Elevation >= Config.MinimumRiverSourceElevation && x.Elevation <= Config.MaximumRiverSourceElevation && !x.IsOcean).ToList();
+            for(int i = 0; i < attempts && candidates.Count > 0; i++)
+            {
+                var c = candidates[_rnd.Next(candidates.Count)];
+                candidates.Remove(c);
+
+                while(!c.IsCoast)
+                {
+                    c.RiverVolume += 1;
+                    var next = c.Downslope;
+                    var edge = c.Edges.FirstOrDefault(x => x.OtherCorner(c) == next);
+                    if(edge != null)
+                    {
+                        edge.RiverVolume += 1;
+                        
+                        if(next.IsCoast)
+                        {
+                            next.RiverVolume += 1;
+                            break;
+                        }
+                        else
+                        {
+                            c = next;
+                        }
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine("No corner found for connnecte edge. How'd that happen?");
+                        break;
                     }
                 }
             }

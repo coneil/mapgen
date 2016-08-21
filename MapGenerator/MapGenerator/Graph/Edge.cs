@@ -13,7 +13,9 @@ namespace coneil.World.Map.Graph
         public Tri P0;
         public Tri P1;
 
-        public Corner[] Corners;
+        public Corner[] Corners { get; private set; }
+
+        public int RiverVolume;
 
         public Corner OtherCorner(Corner c)
         {
@@ -26,6 +28,8 @@ namespace coneil.World.Map.Graph
             C1 = c1;
 
             Corners = new Corner[2] { C0, C1 };
+
+            RiverVolume = 0;
         }
     }
 }

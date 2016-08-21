@@ -36,15 +36,69 @@ namespace MapDisplay
                 var rp = new Pen(Color.Red, 1f);
                 var gp = new Pen(Color.Green, 1f);
 
+                //PaintElevation(g);
+
                 PaintPolys(g);
 
                 PaintCoastline(g);
+
+                PaintRivers(g);
+
+                //PaintWatershed(g);
 
                 //PaintCorners(g);
 
                 //PaintEdges(g);
                 
                 _draw = false;
+            }
+        }
+
+        void PaintRivers(Graphics g)
+        {
+            Pen p = new Pen(Color.Blue);
+            foreach(var edge in _map.Edges)
+            {
+                if(edge.RiverVolume > 0)
+                {
+                    PaintEdge(edge, g, p);
+                }
+            }
+        }
+
+        void PaintWatershed(Graphics g)
+        {
+            Pen p = new Pen(Color.AliceBlue);
+            foreach(var c in _map.Corners)
+            {
+                if(!c.IsOcean && !c.IsCoast)
+                {
+                    g.DrawEllipse(p, f(c.Watershed.Point.X), f(c.Watershed.Point.Y), 3f, 2f);
+                }
+            }
+        }
+
+        void PaintElevation(Graphics g)
+        {
+            var ordered = _map.Polys.OrderBy(x => x.GetElevation());
+            float lowest = ordered.ElementAt(0).GetElevation();
+            float highest = ordered.ElementAt(_map.Polys.Count - 1).GetElevation();
+
+            foreach(var poly in _map.Polys)
+            {
+                var points = new List<PointF>();
+                foreach(var c in poly.Corners)
+                {
+                    points.Add(new PointF(f(c.Point.X), f(c.Point.Y)));
+                }
+
+                float el = poly.GetElevation();
+                el = (el - lowest) / (highest - lowest);
+
+                Color color = LerpColor(Color.Blue, Color.Yellow, el);
+
+                Brush b = new SolidBrush(color);
+                g.FillPolygon(b, points.ToArray());
             }
         }
 
@@ -66,7 +120,7 @@ namespace MapDisplay
                 else if(poly.IsWater(_map.Config.LakeThreshold))
                     color = LerpColor(Color.LightBlue, Color.LightSkyBlue, el);
                 else
-                    color = LerpColor(Color.Tan, Color.SaddleBrown, el);
+                    color = LerpColor(Color.Tan, Color.AntiqueWhite, el);
 
                 Brush b = new SolidBrush(color);
                 g.FillPolygon(b, points.ToArray());
@@ -75,7 +129,7 @@ namespace MapDisplay
 
         void PaintCoastline(Graphics g)
         {
-            var p = new Pen(Color.Black, 2f);
+            var p = new Pen(Color.Black, 1f);
             foreach(var edge in _map.Edges)
             {
                 if(edge.C0.IsCoast && edge.C1.IsCoast)
@@ -84,7 +138,7 @@ namespace MapDisplay
                     {
                         if(edge.P0.IsOcean() != edge.P1.IsOcean())
                         {
-                            g.DrawLine(p, new PointF(f(edge.C0.Point.X), f(edge.C0.Point.Y)), new PointF(f(edge.C1.Point.X), f(edge.C1.Point.Y)));
+                            PaintEdge(edge, g, p);
                         }
                     }
                     else
@@ -109,14 +163,21 @@ namespace MapDisplay
             var p = new Pen(Color.Black, 1f);
             foreach(var edge in _map.Edges)
             {
-                g.DrawLine(p, new PointF(f(edge.C0.Point.X), f(edge.C0.Point.Y)), new PointF(f(edge.C1.Point.X), f(edge.C1.Point.Y)));
+                PaintEdge(edge, g, p);
             }
+        }
+
+        void PaintEdge(coneil.World.Map.Graph.Edge edge, Graphics g, Pen p)
+        {
+            g.DrawLine(p, new PointF(f(edge.C0.Point.X), f(edge.C0.Point.Y)), new PointF(f(edge.C1.Point.X), f(edge.C1.Point.Y)));
         }
 
         Color LerpColor(Color a, Color b, float t)
         {
+            float first = t;
             t = t < 0 ? 0 : t;
             t = t > 1f ? 1f : t;
+            if(first != t) System.Diagnostics.Debug.WriteLine("Clamped t from " + first);
             return Color.FromArgb(
                 Convert.ToInt32(a.A + (b.A - a.A) * t),
                 Convert.ToInt32(a.R + (b.R - a.R) * t),
