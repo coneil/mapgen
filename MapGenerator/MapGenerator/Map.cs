@@ -43,10 +43,42 @@ namespace coneil.World.Map
             PlanchonDarbouxCorrection();
             SetSeaLevel();
             AssignOceanAndLand(); // Assumes all ocean is below elevation 0 when it's run (done by SetSeaLevel())
+            IdentifyCoastline();
             AssignDownslopesAndWatersheds();
             Normalize(); // Normalize so we can more easily find spots for river sources. Assume elevation values of 0-1 from here on.
-            RedistributeElevations();
             CreateRivers();
+            Erode();
+            SetSeaLevel();
+            
+            foreach(var c in Corners)
+            {
+                c.IsOcean = c.IsWater = c.IsCoast = false;
+            }
+
+            AssignOceanAndLand(); // Assumes all ocean is below elevation 0 when it's run (done by SetSeaLevel())
+            IdentifyCoastline();
+            Normalize();
+            RedistributeElevations();
+            
+            foreach(var c in Corners)
+            {
+                if(c.RiverVolume > 0 && c.IsOcean) c.RiverVolume = 0;
+            }
+
+            foreach(var e in Edges)
+            {
+                if(e.RiverVolume > 0)
+                {
+                    if(e.P0 != null && e.P0.IsOcean())
+                    {
+                        e.RiverVolume = 0;
+                    }
+                    else if(e.P1 != null && e.P1.IsOcean())
+                    {
+                        e.RiverVolume = 0;
+                    }
+                }
+            }
             
             // Generate random points √
             // Relax those points √
@@ -299,24 +331,6 @@ namespace coneil.World.Map
             }
         }
 
-        public void ChaoticRelax()
-        {
-            List<Corner> queue = new List<Corner>() { Corners[0] };
-            List<Corner> touched = new List<Corner>();
-
-            while(queue.Count > 0)
-            {
-                var c = queue[0];
-                queue.Remove(c);
-                touched.Add(c);
-                c.Elevation = c.NeighboringCorners.Average(x => x.Elevation);
-                foreach(var n in c.NeighboringCorners)
-                {
-                    if(!queue.Contains(n) && !touched.Contains(n)) queue.Add(n);
-                }
-            }
-        }
-
         public void Relax()
         {
             List<float> elevations = new List<float>();
@@ -333,7 +347,6 @@ namespace coneil.World.Map
             for(int i = 0; i < Corners.Count; i++)
             {
                 Corners[i].Elevation = elevations[i];
-                System.Diagnostics.Debug.WriteLine(Corners[i].Elevation);
             }
         }
 
@@ -459,9 +472,10 @@ namespace coneil.World.Map
                     }
                 }
             }
+        }
 
-            System.Diagnostics.Debug.WriteLine(Corners.Count(x => x.IsOcean) + " of " + Corners.Count + " are ocean");
-
+        void IdentifyCoastline()
+        {
             // Identify all coastal points
             foreach(var c in Corners)
             {
@@ -585,6 +599,48 @@ namespace coneil.World.Map
                         break;
                     }
                 }
+            }
+        }
+
+        public void Erode()
+        {
+            foreach(var c in Corners)
+            {
+                if(c.IsOcean) continue;
+
+                c.Moisture += 0.001f;
+                var n = c;
+                while(n.Downslope != null && n.Downslope != n)
+                {
+                    n.Downslope.Moisture += 0.001f;
+                    n = n.Downslope;
+                }
+            }
+
+            var sorted = Corners.OrderByDescending(x => x.Moisture).ToArray();
+            for(int i = 0; i < Config.ErosionSteps; i++)
+            {
+                for(int j = 0; j < sorted.Length; j++)
+                {
+                    Corner s = sorted[j];
+                    double slopes = 0f;
+                    foreach(var e in s.Edges)
+                    {
+                        slopes += System.Math.Abs(e.OtherCorner(s).Elevation - s.Elevation);
+                    }
+                    slopes /= (float) s.Edges.Count;
+
+                    //s.Elevation 
+                    double mod = System.Math.Sqrt(s.Moisture);
+                    float el = Convert.ToSingle(mod * slopes);
+                    s.Elevation -= el;
+                    //System.Diagnostics.Debug.WriteLine(s.Elevation + " => " + el + " from " + slopes + " and " + mod);
+                }
+            }
+
+            foreach(var c in Corners)
+            {
+                c.Moisture = 0f;
             }
         }
         #endregion
