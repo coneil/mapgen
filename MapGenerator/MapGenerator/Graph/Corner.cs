@@ -23,6 +23,7 @@ namespace coneil.World.Map.Graph
         public int RiverVolume; // non-zero value if river, representing relative volume of river at this point
 
         public List<Edge> Edges { get; private set; }
+        public List<Tri> Polys { get; private set; }
 
         private List<Corner> _neighbors;
         public List<Corner> NeighboringCorners
@@ -34,7 +35,7 @@ namespace coneil.World.Map.Graph
                     _neighbors.Clear();
                     foreach(var e in Edges)
                     {
-                        _neighbors.Add(e.Other(this));
+                        _neighbors.Add(e.OtherCorner(this));
                     }
                 }
                 return _neighbors;
@@ -47,9 +48,16 @@ namespace coneil.World.Map.Graph
             Edges.Add(edge);
         }
 
+        public void AddPoly(Tri poly)
+        {
+            if(Polys.Contains(poly)) return;
+            Polys.Add(poly);
+        }
+
         public Corner()
         {
             Edges = new List<Edge>();
+            Polys = new List<Tri>();
             _neighbors = new List<Corner>();
             Elevation = 0f;
             Moisture = 0f;

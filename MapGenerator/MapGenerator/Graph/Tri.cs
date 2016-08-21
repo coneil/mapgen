@@ -29,6 +29,23 @@ namespace coneil.World.Map.Graph
 
             Edges = new Edge[3] { E0, E1, E2 };
 
+            foreach(var edge in Edges)
+            {
+                if(edge.P0 == null)
+                {
+                    edge.P0 = this;
+                }
+                else if(edge.P1 == null)
+                {
+                    edge.P1 = this;
+                }
+
+                foreach(var corner in edge.Corners)
+                {
+                    corner.AddPoly(this);
+                }
+            }
+
             List<Corner> corners = new List<Corner>();
             foreach(var e in Edges)
             {
@@ -60,6 +77,10 @@ namespace coneil.World.Map.Graph
         {
             if(IsOcean()) return true;
 
+            if(Corners.Count(x => x.IsWater) == Corners.Length) return true;
+
+            if(Corners.Count(x => x.IsCoast) > 0) return false;
+
             List<Corner> corners = new List<Corner>();
             foreach(var c in Corners)
             {
@@ -79,7 +100,7 @@ namespace coneil.World.Map.Graph
         public bool IsOcean()
         {
             int numWater = Corners.Count(x => x.IsOcean);
-            return numWater > 2 || Corners.Count(x => x.IsCoast) > 0;
+            return numWater > 2 || (numWater > 0 && Corners.Count(x => x.IsCoast) > 0);
         }
     }
 }

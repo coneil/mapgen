@@ -137,11 +137,8 @@ namespace coneil.World.Map
 
                 if(c0 == null || c1 == null) continue;
 
-                var edge = new Graph.Edge(c0, c1);
-                c0.AddEdge(edge);
-                c1.AddEdge(edge);
-                Edges.Add(edge);
-
+                var edge = GetOrCreateEdge(c0, c1);
+                
                 // Create tris for the sites it's bordering
                 if(!dEdge.IsUnassigned())
                 {
@@ -150,15 +147,9 @@ namespace coneil.World.Map
                         Corner site = centers.FirstOrDefault(x => x.Point.Equals(dEdge.P0));
                         if(site != null)
                         {
-                            var e1 = new Graph.Edge(c0, site);
-                            c0.AddEdge(e1);
-                            site.AddEdge(e1);
-                            var e2 = new Graph.Edge(c1, site);
-                            c1.AddEdge(e2);
-                            site.AddEdge(e2);
+                            var e1 = GetOrCreateEdge(c0, site);
+                            var e2 = GetOrCreateEdge(c1, site);
                             var tri = new Tri(edge, e1, e2);
-                            Edges.Add(e1);
-                            Edges.Add(e2);
                             Polys.Add(tri);
                         }
                     }
@@ -167,15 +158,9 @@ namespace coneil.World.Map
                         Corner site = centers.FirstOrDefault(x => x.Point.Equals(dEdge.P1));
                         if(site != null)
                         {
-                            var e1 = new Graph.Edge(c0, site);
-                            c0.AddEdge(e1);
-                            site.AddEdge(e1);
-                            var e2 = new Graph.Edge(c1, site);
-                            c1.AddEdge(e2);
-                            site.AddEdge(e2);
+                            var e1 = GetOrCreateEdge(c0, site);
+                            var e2 = GetOrCreateEdge(c1, site);
                             var tri = new Tri(edge, e1, e2);
-                            Edges.Add(e1);
-                            Edges.Add(e2);
                             Polys.Add(tri);
                         }
                     }
@@ -183,6 +168,23 @@ namespace coneil.World.Map
             }
 
             cornerMap = null;
+        }
+
+        Graph.Edge GetOrCreateEdge(Corner a, Corner b)
+        {
+            foreach(var e in Edges)
+            {
+                if((e.C0 == a && e.C1 == b) || (e.C0 == b && e.C1 == a))
+                {
+                    return e;
+                }
+            }
+
+            var edge = new Graph.Edge(a, b);
+            a.AddEdge(edge);
+            b.AddEdge(edge);
+            Edges.Add(edge);
+            return edge;
         }
 
         // The voronoi library has unique, overlapping points for all of the edges in its graph.
@@ -452,6 +454,44 @@ namespace coneil.World.Map
                 if(c.IsWater) continue;
 
                 c.IsCoast = c.NeighboringCorners.Count(x => x.IsOcean) > 0;
+            }
+
+            // A sweep is made on edges to identify corners that should not be identify as coastal
+            // due to neighboring polygons identifying as ocean based on their rules.
+            foreach(var edge in Edges)
+            {
+                if(edge.C0.IsCoast && edge.C1.IsCoast)
+                {
+                    if(edge.P0 != null && edge.P1 != null)
+                    {
+                        if(edge.P0.IsOcean() == edge.P1.IsOcean())
+                        {
+                            if(edge.P0.IsOcean())
+                            {
+                                // This edge is sticking out from land. One of the corners is a legitimate part of the coast.
+                                // The other should be reset.
+                                foreach(var corner in edge.Corners)
+                                {
+                                    if(corner.Polys.Count(x => !x.IsOcean()) == 0)
+                                    {
+                                        corner.IsCoast = false;
+                                        corner.IsOcean = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                // This edge is made up of two, valid coastal points, but cuts across a penninsula.
+                                // It can be left alone.
+                            }
+                        }
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine("Null poly");
+                    }
+                }
             }
         }
         #endregion

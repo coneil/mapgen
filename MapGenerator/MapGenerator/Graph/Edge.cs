@@ -10,10 +10,12 @@ namespace coneil.World.Map.Graph
     {
         public Corner C0;
         public Corner C1;
+        public Tri P0;
+        public Tri P1;
 
         public Corner[] Corners;
 
-        public Corner Other(Corner c)
+        public Corner OtherCorner(Corner c)
         {
             return C0 == c ? C1 : C0;
         }

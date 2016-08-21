@@ -36,60 +36,80 @@ namespace MapDisplay
                 var rp = new Pen(Color.Red, 1f);
                 var gp = new Pen(Color.Green, 1f);
 
-                foreach(var poly in _map.Polys)
-                {
-                    // fill
-                    var points = new List<PointF>();
-                    foreach(var c in poly.Corners)
-                    {
-                        points.Add(new PointF(f(c.Point.X), f(c.Point.Y)));
-                    }
+                PaintPolys(g);
 
-                    float el = poly.GetElevation();
-                    Color color;
-                    if(poly.IsOcean())
-                        color = Color.Blue;// LerpColor(Color.Blue, Color.Yellow, el);
-                    else if(poly.IsWater(_map.Config.LakeThreshold))
-                        color = Color.BlueViolet;// LerpColor(Color.Blue, Color.Red, -el);
-                    else
-                        color = Color.SaddleBrown;
+                PaintCoastline(g);
 
-                    Brush b = new SolidBrush(color);
-                    g.FillPolygon(b, points.ToArray());
-                }
+                //PaintCorners(g);
+
+                //PaintEdges(g);
                 
-                foreach(var edge in _map.Edges)
+                _draw = false;
+            }
+        }
+
+        void PaintPolys(Graphics g)
+        {
+            foreach(var poly in _map.Polys)
+            {
+                var points = new List<PointF>();
+                foreach(var c in poly.Corners)
                 {
-                    if(edge.C0.IsCoast && edge.C1.IsCoast)
-                    {
-                        g.DrawLine(p, new PointF(f(edge.C0.Point.X), f(edge.C0.Point.Y)), new PointF(f(edge.C1.Point.X), f(edge.C1.Point.Y)));
-                    }
+                    points.Add(new PointF(f(c.Point.X), f(c.Point.Y)));
                 }
-                 
-                /*
-                foreach(var corner in _map.Corners)
+
+                float el = poly.GetElevation();
+
+                Color color;
+                if(poly.IsOcean())
+                    color = LerpColor(Color.DarkBlue, Color.Blue, el);
+                else if(poly.IsWater(_map.Config.LakeThreshold))
+                    color = LerpColor(Color.LightBlue, Color.LightSkyBlue, el);
+                else
+                    color = LerpColor(Color.Tan, Color.SaddleBrown, el);
+
+                Brush b = new SolidBrush(color);
+                g.FillPolygon(b, points.ToArray());
+            }
+        }
+
+        void PaintCoastline(Graphics g)
+        {
+            var p = new Pen(Color.Black, 2f);
+            foreach(var edge in _map.Edges)
+            {
+                if(edge.C0.IsCoast && edge.C1.IsCoast)
                 {
-                    if(corner.IsOcean)
+                    if(edge.P0 != null && edge.P1 != null)
                     {
-                        g.DrawRectangle(p, new System.Drawing.Rectangle(Convert.ToInt32(corner.Point.X), Convert.ToInt32(corner.Point.Y), 2, 2));
-                    }
-                    else if(!corner.IsWater)
-                    {
-                        g.DrawRectangle(rp, new System.Drawing.Rectangle(Convert.ToInt32(corner.Point.X), Convert.ToInt32(corner.Point.Y), 2, 2));
+                        if(edge.P0.IsOcean() != edge.P1.IsOcean())
+                        {
+                            g.DrawLine(p, new PointF(f(edge.C0.Point.X), f(edge.C0.Point.Y)), new PointF(f(edge.C1.Point.X), f(edge.C1.Point.Y)));
+                        }
                     }
                     else
                     {
-                        g.DrawRectangle(gp, new System.Drawing.Rectangle(Convert.ToInt32(corner.Point.X), Convert.ToInt32(corner.Point.Y), 2, 2));
+                        System.Diagnostics.Debug.WriteLine("Null poly");
                     }
-                }*/
-                 
-                /*
-                foreach(var edge in _map.Edges)
-                {
-                    g.DrawLine(p, new PointF(f(edge.C0.Point.X), f(edge.C0.Point.Y)), new PointF(f(edge.C1.Point.X), f(edge.C1.Point.Y)));
                 }
-                */
-                _draw = false;
+            }
+        }
+
+        void PaintCorners(Graphics g)
+        {
+            var p = new Pen(Color.Black, 1f);
+            foreach(var corner in _map.Corners)
+            {
+                g.DrawRectangle(p, new System.Drawing.Rectangle(Convert.ToInt32(corner.Point.X), Convert.ToInt32(corner.Point.Y), 2, 2));
+            }
+        }
+
+        void PaintEdges(Graphics g)
+        {
+            var p = new Pen(Color.Black, 1f);
+            foreach(var edge in _map.Edges)
+            {
+                g.DrawLine(p, new PointF(f(edge.C0.Point.X), f(edge.C0.Point.Y)), new PointF(f(edge.C1.Point.X), f(edge.C1.Point.Y)));
             }
         }
 
@@ -109,6 +129,7 @@ namespace MapDisplay
         {
             var config = new MapConfig();
             _map = new coneil.World.Map.Map(config);
+            _map.Normalize();
             _draw = true;
         }
 
