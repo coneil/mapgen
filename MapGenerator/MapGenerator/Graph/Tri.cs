@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 
 namespace coneil.World.Map.Graph
 {
+    public enum Biome { NONE, OCEAN, MARSH, ICE, LAKE, BEACH, SNOW, TUNDRA, BARE, SCORCHED, TAIGA, SHRUBLAND, TEMPERATE_DESERT, TEMPERATE_RAIN_FOREST,
+                        TEMPERATE_DECIDUOUS_FOREST, TROPICAL_RAIN_FOREST, TROPICAL_SEASONAL_FOREST, GRASSLAND, SUBTROPICAL_DESERT }
     // The smallest poly tracked in our custom graph.
     // Represented by the edges of the tri, it is constructed from a voronoi site and one of its edges.
     public class Tri
@@ -20,6 +22,8 @@ namespace coneil.World.Map.Graph
         public Corner VoronoiSite { get; private set; }
         public Corner EdgeCorner0 { get; private set; }
         public Corner EdgeCorner1 { get; private set; }
+
+        public Biome Biome;
 
         public Tri(Edge e0, Edge e1, Edge e2)
         {
@@ -101,6 +105,16 @@ namespace coneil.World.Map.Graph
         {
             int numWater = Corners.Count(x => x.IsOcean);
             return numWater > 2 || (numWater > 0 && Corners.Count(x => x.IsCoast) > 0);
+        }
+
+        public float GetMoisture()
+        {
+            return Corners.Average(x => x.Moisture);
+        }
+
+        public bool IsCoast()
+        {
+            return Corners.Any(x => x.IsCoast) && !IsOcean();
         }
     }
 }

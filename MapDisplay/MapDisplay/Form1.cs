@@ -38,7 +38,9 @@ namespace MapDisplay
 
                 //PaintElevation(g);
 
-                PaintPolys(g);
+                //PaintPolys(g);
+
+                PaintBiomes(g);
 
                 PaintCoastline(g);
 
@@ -51,6 +53,46 @@ namespace MapDisplay
                 //PaintEdges(g);
                 
                 _draw = false;
+            }
+        }
+
+        void PaintBiomes(Graphics g)
+        {
+            var colors = new Dictionary<Biome, Color>()
+            {
+                { Biome.NONE, Color.Black },
+                { Biome.OCEAN, Color.Blue },
+                { Biome.MARSH, Color.DarkSeaGreen },
+                { Biome.ICE, Color.SteelBlue },
+                { Biome.LAKE, Color.Blue },
+                { Biome.SNOW, Color.White },
+                { Biome.TUNDRA, Color.Wheat },
+                { Biome.BARE, Color.LightGray },
+                { Biome.SCORCHED, Color.Gray },
+                { Biome.TAIGA, Color.Bisque },
+                { Biome.SHRUBLAND, Color.Beige },
+                { Biome.TEMPERATE_DESERT, Color.SaddleBrown},
+                { Biome.TEMPERATE_RAIN_FOREST, Color.ForestGreen },
+                { Biome.BEACH, Color.SandyBrown },
+                { Biome.TEMPERATE_DECIDUOUS_FOREST, Color.DarkGreen },
+                { Biome.GRASSLAND, Color.LawnGreen },
+                { Biome.TROPICAL_RAIN_FOREST, Color.DarkOliveGreen },
+                { Biome.TROPICAL_SEASONAL_FOREST, Color.GreenYellow },
+                { Biome.SUBTROPICAL_DESERT, Color.PaleVioletRed }
+            };
+
+            foreach(var p in _map.Polys)
+            {
+                var points = new List<PointF>();
+                foreach(var c in p.Corners)
+                {
+                    points.Add(new PointF(f(c.Point.X), f(c.Point.Y)));
+                }
+                
+                Color color = colors[p.Biome];
+
+                Brush b = new SolidBrush(color);
+                g.FillPolygon(b, points.ToArray());
             }
         }
 
@@ -118,7 +160,7 @@ namespace MapDisplay
                 if(poly.IsOcean())
                     color = LerpColor(Color.DarkBlue, Color.Blue, el);
                 else if(poly.IsWater(_map.Config.LakeThreshold))
-                    color = LerpColor(Color.LightBlue, Color.LightSkyBlue, el);
+                    color = Color.Blue;
                 else
                     color = LerpColor(Color.Tan, Color.AntiqueWhite, el);
 

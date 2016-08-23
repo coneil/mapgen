@@ -15,6 +15,11 @@ namespace coneil.World.Map.Graph
 
         public Corner[] Corners { get; private set; }
 
+        public Tri OtherPoly(Tri p)
+        {
+            return P0 == p ? P1 : P0;
+        }
+
         public int RiverVolume;
 
         public Corner OtherCorner(Corner c)

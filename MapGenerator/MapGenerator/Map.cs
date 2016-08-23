@@ -47,6 +47,8 @@ namespace coneil.World.Map
             AssignDownslopesAndWatersheds();
             Normalize(); // Normalize so we can more easily find spots for river sources. Assume elevation values of 0-1 from here on.
             CreateRivers();
+
+            // Erosion sinks a lot of geometry, and requires reidentifying everything afterwards.
             Erode();
             SetSeaLevel();
             
@@ -60,6 +62,7 @@ namespace coneil.World.Map
             Normalize();
             RedistributeElevations();
             
+            // Remove river paths now in the ocean due to erosion
             foreach(var c in Corners)
             {
                 if(c.RiverVolume > 0 && c.IsOcean) c.RiverVolume = 0;
@@ -79,22 +82,9 @@ namespace coneil.World.Map
                     }
                 }
             }
-            
-            // Generate random points √
-            // Relax those points √
-            // Generate voronoi √
-            // Translate diagram to custom graph
-                // Use and record corners of voronoi polys
-                // Use and record sites of all voronoi polys (centers)
-                // Create edges using voronoi poly corners and ALSO all centers to their corners
-                // Terminology:
-                    // Center - voronoi site
-                    // Border - side to a voronoi poly, a line segment
-                    // Corner - where borders meet
-                    // Spoke - line segment from center to corner
-                    // Edge - border or spoke
-                // All edges become the geometry for deformations
-                // Biomes are ultimately assigned for each center using data about surrounding corners
+
+            CreateMoisture();
+            AssignBiomes();
         }
 
         #region GRAPH GENERATION
@@ -604,6 +594,7 @@ namespace coneil.World.Map
 
         public void Erode()
         {
+            // Hijacking Moisture to record waterflow
             foreach(var c in Corners)
             {
                 if(c.IsOcean) continue;
@@ -641,6 +632,100 @@ namespace coneil.World.Map
             foreach(var c in Corners)
             {
                 c.Moisture = 0f;
+            }
+        }
+
+        void CreateMoisture()
+        {
+            var queue = new List<Corner>();
+            foreach(var c in Corners)
+            {
+                if(c.IsOcean || c.IsCoast)
+                {
+                    c.Moisture = 1f;
+                }
+                else if(c.IsWater || c.RiverVolume > 0)
+                {
+                    c.Moisture = c.RiverVolume > 0 ? System.Math.Min(3f, (0.2f * c.RiverVolume)) : 1f;
+                    queue.Add(c);
+                }
+            }
+
+            while(queue.Count > 0)
+            {
+                var next = queue[0];
+                queue.RemoveAt(0);
+
+                foreach(var n in next.NeighboringCorners)
+                {
+                    if(n.IsOcean || n.IsCoast) continue;
+
+                    float moisture = next.Moisture * 0.9f;
+                    if(moisture > n.Moisture)
+                    {
+                        n.Moisture = moisture;
+                        queue.Add(n);
+                    }
+                }
+            }
+        }
+
+        void AssignBiomes()
+        {
+            foreach(var p in Polys)
+            {
+                p.Biome = AssignBiome(p);
+            }
+        }
+
+        Biome AssignBiome(Tri p)
+        {
+            float elevation = p.GetElevation();
+            float moisture = p.GetMoisture();
+            bool ocean = p.IsOcean();
+            bool water = p.IsWater(Config.LakeThreshold);
+            bool coast = p.IsCoast();
+
+            if(ocean)
+            {
+                return Biome.OCEAN;
+            }
+            else if(water)
+            {
+                if(elevation < 0.1f) return Biome.MARSH;
+                if(elevation > 0.8f) return Biome.ICE;
+                return Biome.LAKE;
+            }
+            else if(coast)
+            {
+                return Biome.BEACH;
+            }
+            else if(elevation > 0.8f)
+            {
+                if(moisture > 0.5f) return Biome.SNOW;
+                if(moisture > 0.33f) return Biome.TUNDRA;
+                if(moisture > 0.16f) return Biome.BARE;
+                return Biome.SCORCHED;
+            }
+            else if(elevation > 0.6f)
+            {
+                if(moisture > 0.66f) return Biome.TAIGA;
+                if(moisture > 0.33f) return Biome.SHRUBLAND;
+                return Biome.TEMPERATE_DESERT;
+            }
+            else if(elevation > 0.3f)
+            {
+                if(moisture > 0.83f) return Biome.TEMPERATE_RAIN_FOREST;
+                if(moisture > 0.5f) return Biome.TEMPERATE_DECIDUOUS_FOREST;
+                if(moisture > 0.16f) return Biome.GRASSLAND;
+                return Biome.TEMPERATE_DESERT;
+            }
+            else
+            {
+                if(moisture > 0.66f) return Biome.TROPICAL_RAIN_FOREST;
+                if(moisture > 0.33f) return Biome.TROPICAL_SEASONAL_FOREST;
+                if(moisture > 0.16f) return Biome.GRASSLAND;
+                return Biome.SUBTROPICAL_DESERT;
             }
         }
         #endregion

@@ -38,9 +38,9 @@ namespace coneil.World.Map
             WatershedMaxSteps = 20;
             MinimumNumberOfRivers = 15;
             MaximumNumberOfRivers = 45;
-            MinimumRiverSourceElevation = 0.4f;
-            MaximumRiverSourceElevation = 0.9f;
-            ErosionSteps = 10;
+            MinimumRiverSourceElevation = 0.8f;
+            MaximumRiverSourceElevation = 1f;
+            ErosionSteps = 4;
         }
     }
 }
